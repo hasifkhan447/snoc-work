@@ -93,8 +93,8 @@ sa=0 sb=0 sd=0
 model=pfet_01v8
 spiceprefix=X
 }
-C {devices/isource.sym} 230 -250 0 0 {name=I0 value=0.1u}
+C {devices/isource.sym} 230 -250 0 0 {name=I0 value=1u}
 C {devices/vdd.sym} 460 -300 0 0 {name=l7 lab=VDD}
-C {devices/isource.sym} 460 -60 0 0 {name=I1 value=0.1u}
+C {devices/isource.sym} 460 -60 0 0 {name=I1 value=1u}
 C {devices/lab_pin.sym} 160 -130 0 0 {name=l8 sig_type=std_logic lab=vthn}
 C {devices/lab_pin.sym} 400 -220 0 0 {name=l9 sig_type=std_logic lab=vthp}

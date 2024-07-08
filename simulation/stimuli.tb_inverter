@@ -1,0 +1,24 @@
+unit n
+voltage VDD
+slope 1 
+
+format hspice_simple
+
+
+param V_HIGH 1.8
+param V_LOW 0
+
+beginfile stimuli.cir
+
+set VDD V_HIGH
+set IN V_HIGH
+
+set start 0 
+
+s 100
+
+set IN V_LOW
+
+s 100
+
+

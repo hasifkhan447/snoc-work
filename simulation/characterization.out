@@ -1,0 +1,18 @@
+
+Note: No compatibility mode selected!
+
+
+Warning: Missing .endc statement!
+    This may cause subsequent errors.
+
+Warning: redefinition of .subckt sky130_fd_pr__res_generic_nd, ignored
+Warning: redefinition of .subckt sky130_fd_pr__res_generic_pd, ignored
+Warning: redefinition of .subckt sky130_fd_pr__res_generic_po, ignored
+
+Circuit: ** sch_path: /home/hak/work/characterization.sch
+
+Error on line:
+  m.xm1.msky130_fd_pr__nfet_01v8 vdd net2 0 0 sky130_fd_pr__nfet_01v8__model l=    1.500000000000000e-01     w=    1.000000000000000e+00     nf=    1.000000000000000e+00     ad=    2.900000000000000e-01     as=    2.900000000000000e-01     pd=    2.580000000000000e+00     ps=    2.580000000000000e+00     nrd=    2.900000000000000e-01     nrs=    2.900000000000000e-01     sa=    0.000000000000000e+00     sb=    0.000000000000000e+00     sd=    0.000000000000000e+00     m=    1.000000000000000e+00   
+could not find a valid modelname
+    Simulation interrupted due to error!
+

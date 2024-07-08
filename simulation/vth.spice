@@ -1,0 +1,38 @@
+** sch_path: /home/hak/work/vth.sch
+**.subckt vth
+Vdd VDD GND 1.8
+XM1 vthn vthn GND GND sky130_fd_pr__nfet_01v8 L=1 W=5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29'
++ pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W'
++ sa=0 sb=0 sd=0 mult=1 m=1
+XM2 vthp vthp VDD VDD sky130_fd_pr__pfet_01v8 L=1 W=5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29'
++ pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W'
++ sa=0 sb=0 sd=0 mult=1 m=1
+I0 VDD vthn 1u
+I1 vthp GND 1u
+**** begin user architecture code
+
+
+
+.options savecurrents
+
+.control
+save all
+tran 1n 10n
+
+let id_nmos=@m.xm1.msky130_fd_pr__nfet_01v8[id]
+let id_pmos=@m.xm2.msky130_fd_pr__pfet_01v8[id]
+
+
+print v(vthn) v(vthp)
+write vth.raw
+
+set appendwrite
+.endc
+
+
+.lib /usr/local/share/pdk/sky130A/libs.tech/combined/sky130.lib.spice tt
+**** end user architecture code
+**.ends
+.GLOBAL GND
+.GLOBAL VDD
+.end
