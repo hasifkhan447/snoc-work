@@ -8,8 +8,8 @@ XM3 VDD net2 GND GND sky130_fd_pr__nfet_01v8 L=1 W=5 nf=1 ad='int((nf+1)/2) * W/
 XM4 GND net1 VDD VDD sky130_fd_pr__pfet_01v8 L=1 W=5 nf=1 ad='int((nf+1)/2) * W/nf * 0.29' as='int((nf+2)/2) * W/nf * 0.29'
 + pd='2*int((nf+1)/2) * (W/nf + 0.29)' ps='2*int((nf+2)/2) * (W/nf + 0.29)' nrd='0.29 / W' nrs='0.29 / W'
 + sa=0 sb=0 sd=0 mult=1 m=1
-E1 net2 GND VOL=' V(Vgs) '
-E2 VDD net1 VOL=' V(Vgs) '
+E1 net2 GND VOL=' V(Vgs)+0.47 '
+E2 VDD net1 VOL=' V(Vgs)+0.9 '
 **** begin user architecture code
 
 
