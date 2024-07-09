@@ -19,14 +19,14 @@ lab=GND}
 N 360 -250 480 -250 {
 lab=OUT}
 C {sky130_fd_pr/nfet3_01v8.sym} 340 -210 0 0 {name=M2
-W='wn'
-L='ln'
+W=20
+L=0.15
 body=GND
 nf=1
 mult=1
-ad="'int((nf+1)/2) * W/nf * 0.29'" 
+ad="'int((nf+1)/2) * W/nf * 0.29'"
 pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
-as="'int((nf+2)/2) * W/nf * 0.29'" 
+as="'int((nf+2)/2) * W/nf * 0.29'"
 ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
 nrd="'0.29 / W'" nrs="'0.29 / W'"
 sa=0 sb=0 sd=0
@@ -34,39 +34,35 @@ model=nfet_01v8
 spiceprefix=X
 }
 C {sky130_fd_pr/pfet3_01v8.sym} 340 -290 0 0 {name=M1
-W='wp'
-L='lp'
+W=56
+L=0.15
 body=VDD
 nf=1
 mult=1
-ad="'int((nf+1)/2) * W/nf * 0.29'" 
+ad="'int((nf+1)/2) * W/nf * 0.29'"
 pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
-as="'int((nf+2)/2) * W/nf * 0.29'" 
+as="'int((nf+2)/2) * W/nf * 0.29'"
 ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
 nrd="'0.29 / W'" nrs="'0.29 / W'"
 sa=0 sb=0 sd=0
 model=pfet_01v8
 spiceprefix=X
 }
-C {devices/code.sym} 830 -300 0 0 {name=optimize only_toplevel=true spice_ignore=false value="
+C {devices/code.sym} 830 -300 0 0 {name=sweep only_toplevel=true spice_ignore=false value="
 
 .options savecurrents
 
 .control
 save all
+*dc vgs 0 1.8 0.01 vdd 0.01 1.8 0.2
+*dc vdd 0.01 1.8 0.01
 dc vgs 0 1.8 0.01
 let id_nmos=@m.xm3.msky130_fd_pr__nfet_01v8[id]
 let id_pmos=@m.xm4.msky130_fd_pr__pfet_01v8[id]
 
-*print @m.xm3.msky130_fd_pr__pfet_01v8[W]
+plot deriv(sqrt(id_nmos))^2/deriv(sqrt(id_pmos))^2 title 'V_DD characteristic' xlabel 'V_DD' ylabel 'Ratio of derivatives'
 
-
-
-*rise time, fall time
-
-*plot deriv(sqrt(id_nmos))^2/deriv(sqrt(id_pmos))^2 title 'V_DD characteristic' xlabel 'V_DD' ylabel 'Ratio of derivatives'
-
-*write characterization.raw
+write characterization.raw
 
 set appendwrite
 .endc

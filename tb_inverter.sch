@@ -21,7 +21,7 @@ lab=vdd}
 N 525 -255 537.5 -255 {
 lab=vout}
 C {devices/gnd.sym} 225 -185 0 0 {name=l3 lab=GND}
-C {devices/code.sym} 612.5 -256.25 0 0 {name=STIMULUS only_toplevel=true spice_ignore=false value="
+C {devices/code.sym} 568.75 -278.75 0 0 {name=STIMULUS only_toplevel=true spice_ignore=false value="
 
 .options savecurrents
 
@@ -30,50 +30,12 @@ C {devices/code.sym} 612.5 -256.25 0 0 {name=STIMULUS only_toplevel=true spice_i
 
 .control
 save all
-
-
-let step=1
-let max_w=80
-let curr_w=40
-let min_diff=100
-let best_w=100
-
-
-
-while curr_w < max_w
-
-
-	alterparam pmos_width = curr_w
-	reset
-	tran 10p 50n
-
-
-	meas tran rise_time TRIG v(vout) VAL=0.18 RISE=1 TARG v(vout) VAL=1.62 RISE=1
-	meas tran fall_time TRIG v(vout) VAL=1.62 FALL=1 TARG v(vout) VAL=0.18 FALL=1
-
-
-	let diff_rise_fall=abs(rise_time - fall_time)
-
-	if diff_rise_fall < min_diff
-		let best_w = curr_w
-		let min_diff = diff_rise_fall
-	end
-
-	print diff_rise_fall
-
-	let curr_w=curr_w + step
-
-
-end
-
-print min_diff
-print best_w
+dc vin 0 1.8 1m
+plot v(v-sweep) v(vout)
 
 .endc
 "}
-C {devices/vsource.sym} 30 -166.25 0 0 {name=Vin value="PULSE(0 1.8 0 0 0 25n 50n)"
-*"PULSE(0 1.8 0 0 0 25n 50n)"
-}
+C {devices/vsource.sym} 30 -166.25 0 0 {name=Vin value=0}
 C {devices/gnd.sym} 30 -63.75 0 0 {name=l5 lab=GND}
 C {devices/vsource.sym} 135 -132.5 0 0 {name=Vdd value=1.8}
 C {devices/gnd.sym} 135 -30 0 0 {name=l7 lab=GND}
@@ -111,15 +73,15 @@ while curr_w < max_w
 	dc vin 0 1.8 1m
 
 	meas dc switching_point WHEN v(vout)=v(in) CROSS=LAST
-	
+
 	let difference=abs(switching_point - 0.9)
 	print switching_point
-	
+
 	if difference < min_diff
 		let best_w = curr_w
 		let min_diff = difference
 	end
-	
+
 	let curr_w=curr_w + step
 
 
