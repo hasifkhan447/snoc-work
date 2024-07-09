@@ -19,8 +19,8 @@ lab=GND}
 N 360 -250 480 -250 {
 lab=OUT}
 C {sky130_fd_pr/nfet3_01v8.sym} 340 -210 0 0 {name=M2
-W=20
-L=0.30
+W='wn'
+L='ln'
 body=GND
 nf=1
 mult=1
@@ -34,8 +34,8 @@ model=nfet_01v8
 spiceprefix=X
 }
 C {sky130_fd_pr/pfet3_01v8.sym} 340 -290 0 0 {name=M1
-W=56
-L=0.30
+W='wp'
+L='lp'
 body=VDD
 nf=1
 mult=1
