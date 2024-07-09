@@ -5,19 +5,19 @@ V {}
 S {}
 E {}
 N 360 -260 360 -240 {
-lab=#net1}
+lab=OUT}
 N 320 -290 320 -210 {
 lab=VDD}
 N 300 -250 320 -250 {
 lab=VDD}
 N 360 -360 360 -320 {
-lab=IN}
+lab=VDD}
 N 270 -250 300 -250 {
 lab=VDD}
 N 360 -180 360 -140 {
 lab=GND}
-N 360 -250 490 -250 {
-lab=#net1}
+N 360 -250 480 -250 {
+lab=OUT}
 C {sky130_fd_pr/nfet3_01v8.sym} 340 -210 0 0 {name=M2
 W=20
 L=0.15
@@ -34,7 +34,7 @@ model=nfet_01v8
 spiceprefix=X
 }
 C {sky130_fd_pr/pfet3_01v8.sym} 340 -290 0 0 {name=M1
-W=51
+W=56
 L=0.15
 body=VDD
 nf=1
@@ -68,7 +68,7 @@ set appendwrite
 .endc
 "}
 C {sky130_fd_pr/corner.sym} 830 -470 0 0 {name=CORNER only_toplevel=true corner=tt}
-C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=VDD}
-C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=IN}
-C {devices/opin.sym} 490 -240 1 1 {name=p3 lab=OUT}
+C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
+C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
+C {devices/opin.sym} 480 -250 2 1 {name=p3 lab=OUT}
 C {devices/ipin.sym} 360 -150 3 0 {name=p4 lab=GND}
