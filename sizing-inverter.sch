@@ -59,7 +59,7 @@ C {sky130_fd_pr/corner.sym} 830 -470 0 0 {name=CORNER only_toplevel=true corner=
 C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
 C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
 C {devices/opin.sym} 480 -250 2 1 {name=p3 lab=OUT}
-C {devices/vsource.sym} 20 -186.25 0 0 {name=Vin value=0}
+C {devices/vsource.sym} 20 -186.25 0 0 {name=Vin value="PULSE(0 1.8 0 0 0 25n 50n)"}
 C {devices/gnd.sym} 20 -83.75 0 0 {name=l5 lab=GND}
 C {devices/vsource.sym} 125 -152.5 0 0 {name=Vdd value=1.8}
 C {devices/gnd.sym} 125 -50 0 0 {name=l7 lab=GND}
@@ -104,60 +104,66 @@ C {devices/gnd.sym} 465 -120 0 0 {name=l3 lab=GND}
 C {devices/code.sym} 612.5 -260 0 0 {name=STIMULUS1 only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
-
-.dc vin 0 1.8 1m
-
-
 .control
 save all
 
-
 let step=1
-let max_w=70
-let curr_w=30
+let max_w=80
+let curr_w=10
 
 let min_diff=100
 let best_w=curr_w
 
-let iters = int((max_w - curr_w)/step)
+let iters = ceil((max_w - curr_w)/step)
 let iter = 0
 
 let switching_points = vector(iters)
+let diffs = vector(iters)
+let width = vector(iters)
 
 
 while curr_w < max_w
 
 	alter m.xm2.msky130_fd_pr__pfet_01v8 W=curr_w
-	run
-	
 
+	tran 10p 50n
+	meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1
+	meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
+	
+	let diffs[iter] = abs( $&rise_time - $&fall_time )
+
+
+	dc vin 0 1.8 1m
 
 	meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
+	set plotstr = ( $plotstr \{$curplot\}.v(out) )  
+	set global_switching_point = $&switching_point
 
-	let difference=abs(switching_point - 0.9)
-	let switching_points[iter]=switching_point
-
-	set plotswpoint = ( $plotswpoint switching_point )	
-	set plotstr = ( $plotstr \{$curplot\}.v(out) )   
-
+	let difference=abs($&switching_point - 0.9)
 
 	if difference < min_diff
 		let best_w = curr_w
 		let min_diff = difference
 	end
 
+
+	let switching_points[iter] = $&switching_point
+	let width[iter] = curr_w
+
+
+
 	let curr_w=curr_w + step
 	let iter=iter + 1
 
-
-end
+	end
 set plotstr = ( $plotstr \{$curplot\}.v(in) )
 
-
 set nolegend
-plot $plotstr 
-plot switching_points
 
+plot switching_points vs width title 'switching points vs time' xlabel 'width' ylabel 'Switching point (V)'
+plot diffs vs width title 'asymmetricity vs time' xlabel 'width' ylabel 'Difference in rise/fall'
+
+plot $plotstr 
 
 .endc
 "}
