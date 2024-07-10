@@ -5,34 +5,37 @@ name=FIXED_NMOS only_toplevel=true spice_ignore=false value="
 save all
 
 setplot const
-let net_switching_points = vector(5)
 let nmos_index = 0
+let nmos_initial = 10
+let nmos_w = nmos_initial
+let nmos_final = 30
+let nmos_step = 1
 
-set nmos_vals = ( 10 20 30 )
-set pmos_vals = ( 10 20 30 )
-set length_nmos_vals = 3
-set length_pmos_vals = 3
+let nmos_length = ceil((nmos_final - nmos_initial)/nmos_step)
 
-foreach nmos_w $nmos_vals
+let pmos_index = 0
+let pmos_initial = 10
+let pmos_w = pmos_initial
+let pmos_final = 30
+let pmos_step = 5
 
-  alter @m.xm1.msky130_fd_pr__nfet_01v8[w]=nmos_w
+while nmos_w < nmos_final 
+
+  alter @m.xm1.msky130_fd_pr__nfet_01v8[w] = nmos_w
 
   setplot const
-  let switching_points = vector($length_nmos_vals)
-  let asymmetricity = vector($length_nmos_vals)
-  let width = vector($length_nmos_vals)
+  let switching_points = vector(nmos_length)
+  let asymmetricity = vector(nmos_length)
+  let width = vector(nmos_length)
 
-  let minimum = 100
-  set minimum_index = 0
-
-  let index = 0
+  let minimum_asym = 100
+  let minimum_width_pmos = 100
 
 **** Find least asymmetric pmos_w **** 
-  foreach pmos_w $pmos_vals
+  while pmos_w < pmos_final
 
     alter @m.xm2.msky130_fd_pr__pfet_01v8[w] = pmos_w
 
-  ******* Asymmetricity analysis ********
     tran 10p 50n ; Run transient analysis using a symmetric pulse of period 25n
 
     meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
@@ -40,14 +43,14 @@ foreach nmos_w $nmos_vals
     
     let diff = abs( $&rise_time - $&fall_time ) ; Create array of diffs
 
-    if diff < minimum
-      let minimum = diff       
-      let minimum_index = index
+    if diff < minimum_asym
+      let minimum_asym = diff       
+      let minimum_width_pmos = pmos_w
     end
-    let index = index + 1
+    let pmos_w = pmos_w + pmos_step
   end
 
-  alter @m.xm2.msky130_fd_pr__pfet_01v8[W] = $pmos_vals[minimum_index]
+  alter @m.xm2.msky130_fd_pr__pfet_01v8[W] = minimum_width_pmos
 
 **** Find switching point for aforementioned pmos_w ****
 
@@ -56,10 +59,11 @@ foreach nmos_w $nmos_vals
   meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
 
   let switching_points[nmos_index] = $&switching_point
-  let width[nmos_index] = $nmos_w
-  let nmos_index = nmos_index + 1
- 
+  let width[nmos_index] = minimum_width_pmos 
+  print nmos_index minimum_width_pmos 
 
+  let nmos_w = nmos_w + nmos_step
+  let nmos_index = nmos_index + 1
 end
 
 plot switching_points vs width
