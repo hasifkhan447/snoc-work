@@ -103,27 +103,43 @@ device="ceramic capacitor"}
 C {devices/gnd.sym} 465 -120 0 0 {name=l3 lab=GND}
 C {devices/code.sym} 612.5 -260 0 0 {name=STIMULUS1 only_toplevel=true spice_ignore=false value="
 .options savecurrents
+
+
+.dc vin 0 1.8 1m
+
+
 .control
 save all
 
 
-let step=0.1
-let max_w=0.8
-let curr_w=0.3
+let step=1
+let max_w=70
+let curr_w=30
 
 let min_diff=100
 let best_w=curr_w
 
+let iters = int((max_w - curr_w)/step)
+let iter = 0
+
+let switching_points = vector(iters)
+
+
 while curr_w < max_w
+
 	alter m.xm2.msky130_fd_pr__pfet_01v8 W=curr_w
-	reset
-	dc vin 0 1.8 1m
-	plot v(in) v(out)
+	run
+	
+
 
 	meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
 
 	let difference=abs(switching_point - 0.9)
-	print switching_point
+	let switching_points[iter]=switching_point
+
+	set plotswpoint = ( $plotswpoint switching_point )	
+	set plotstr = ( $plotstr \{$curplot\}.v(out) )   
+
 
 	if difference < min_diff
 		let best_w = curr_w
@@ -131,14 +147,16 @@ while curr_w < max_w
 	end
 
 	let curr_w=curr_w + step
+	let iter=iter + 1
 
 
 end
-
-*print min_diff
-*print best_w
+set plotstr = ( $plotstr \{$curplot\}.v(in) )
 
 
+set nolegend
+plot $plotstr 
+plot switching_points
 
 
 .endc
