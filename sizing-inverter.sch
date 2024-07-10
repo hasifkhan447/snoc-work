@@ -68,7 +68,7 @@ C {devices/lab_pin.sym} 125 -218.75 1 0 {name=l2 sig_type=std_logic lab=VDD
 C {devices/lab_pin.sym} 20 -233.75 1 0 {name=l8 sig_type=std_logic lab=IN}
 C {devices/gnd.sym} 360 -100 0 0 {name=l1 lab=GND}
 C {sky130_fd_pr/nfet_01v8.sym} 340 -210 0 0 {name=M1
-W=20
+W=10
 L=0.15
 nf=1 
 mult=1
@@ -111,9 +111,6 @@ let step=1
 let max_w=80
 let curr_w=10
 
-let min_diff=100
-let best_w=curr_w
-
 let iters = ceil((max_w - curr_w)/step)
 let iter = 0
 
@@ -126,44 +123,69 @@ while curr_w < max_w
 
 	alter m.xm2.msky130_fd_pr__pfet_01v8 W=curr_w
 
-	tran 10p 50n
-	meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1
+******* Asymmetricity analysis ********
+	tran 10p 50n ; Run transient analysis using a symmetric pulse of period 25n
+
+	meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
 	meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
 	
-	let diffs[iter] = abs( $&rise_time - $&fall_time )
+	let diffs[iter] = abs( $&rise_time - $&fall_time ) ; Create array of diffs
 
 
-	dc vin 0 1.8 1m
+
+******* Switching point analysis ********
+	dc vin 0 1.8 1m ; Run dc analysis, check for operating point
 
 	meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
 	set plotstr = ( $plotstr \{$curplot\}.v(out) )  
 	set global_switching_point = $&switching_point
 
-	let difference=abs($&switching_point - 0.9)
-
-	if difference < min_diff
-		let best_w = curr_w
-		let min_diff = difference
-	end
-
-
 	let switching_points[iter] = $&switching_point
 	let width[iter] = curr_w
-
 
 
 	let curr_w=curr_w + step
 	let iter=iter + 1
 
 	end
+
 set plotstr = ( $plotstr \{$curplot\}.v(in) )
 
 set nolegend
 
+******* Plot results ********
 plot switching_points vs width title 'switching points vs time' xlabel 'width' ylabel 'Switching point (V)'
 plot diffs vs width title 'asymmetricity vs time' xlabel 'width' ylabel 'Difference in rise/fall'
 
-plot $plotstr 
+plot $plotstr
+
+******* Find switching point at most symmetric w ********
+let lowest_asym = 100
+let best_w_index = 0 ; Find most symmetric w
+let iter = 0
+let tolerance = 1p ; We let the asymmetricity be plus/minus 1p of 0 
+
+repeat $&iters 
+
+	let asym = abs(diffs[iter] - 1p)
+	let curr_w = width[iter]
+
+	if asym < lowest_asym ; If we have something smaller, set it as the best goal and repeat
+	best_w_index = iter
+	lowest_asym = asym
+	end
+  
+	let iter = iter + 1
+end
+
+* Now that we have the best width, we now need to move towards getting the switching point
+
+let chosen_switching_point = switching_points[best_w_index]
 
 .endc
-"}
+"
+
+
+
+
+}
