@@ -8,14 +8,14 @@ setplot const
 let nmos_index = 0
 let nmos_w = 5
 let nmos_final = 30
-let nmos_step = 2
+let nmos_step = 1
 
 let nmos_length = ceil((nmos_final - nmos_w)/nmos_step)
 
 let pmos_initial = 20
 let pmos_w = pmos_initial
 let pmos_final = 80
-let pmos_step = 5
+let pmos_step = 1
 
 let switching_points = vector(nmos_length)
 let asymmetricity = vector(nmos_length)
@@ -64,6 +64,7 @@ while nmos_w < nmos_final
   let switching_points[nmos_index] = $&switching_point
   let pmos_width[nmos_index] = minimum_width_pmos 
   let nmos_width[nmos_index] = nmos_w 
+  let asymmetricity[nmos_index] = minimum_asym
   print nmos_index minimum_width_pmos 
 
   let nmos_w = nmos_w + nmos_step
@@ -72,6 +73,7 @@ end
 
 plot switching_points vs nmos_width 
 plot pmos_width vs nmos_width 
+plot asymmetricity vs nmos_width 
 
 .endc
 "
