@@ -88,92 +88,227 @@ value=100f
 footprint=1206
 device="ceramic capacitor"}
 C {devices/gnd.sym} 465 -120 0 0 {name=l3 lab=GND}
-C {devices/code.sym} 827.5 -260 0 0 {name=FIXED_NMOS only_toplevel=true spice_ignore=false value="
-.options savecurrents
+C {devices/code.sym} 827.5 -260 0 0 {name=VARY_NMOS1 only_toplevel=true spice_ignore=false value="
+*.options savecurrents
 
 .control
-save all
+let step_nmos=10
+let step_pmos=1
 
-let step=1
+let index_nmos=0
+let index_pmos= 0
+
+let final_w_nmos=30
 let final_w_pmos=80
-let current_w_pmos=10
 
-let total_iterations = ceil((final_w_pmos - current_w_pmos)/step)
-let index= 0
+let current_w_nmos=20
 
-let switching_points = vector(total_iterations)
-let asymmetricity = vector(total_iterations)
-let width = vector(total_iterations)
+let total_iterations_nmos = ceil((final_w_nmos - current_w_nmos)/step_nmos)
+let total_iterations_pmos = ceil((final_w_pmos - current_w_pmos)/step_pmos)
 
-
-while current_w_pmos < final_w_pmos
-
-	alter m.xm2.msky130_fd_pr__pfet_01v8 W=current_w_pmos
-
-******* Asymmetricity analysis ********
-	tran 10p 50n ; Run transient analysis using a symmetric pulse of period 25n
-
-	meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
-	meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
-	
-	let asymmetricity[index] = abs( $&rise_time - $&fall_time ) ; Create array of diffs
+let net_swiching_points = vector(total_iterations_nmos)
+let net_asymmetricity = vector(total_iterations_nmos)
+let width_nmos = vector(total_iterations_nmos)
 
 
-
-******* Switching point analysis ********
-	dc vin 0 1.8 1m ; Run dc analysis, check for operating point
-
-	meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
-	set plotstr = ( $plotstr \{$curplot\}.v(out) )  
-	set global_switching_point = $&switching_point
-
-	let switching_points[index] = $&switching_point
-	let width[index] = current_w_pmos
+let switching_points = vector(total_iterations_pmos)
+let asymmetricity = vector(total_iterations_pmos)
+let width_pmos = vector(total_iterations_pmos)
 
 
-	let current_w_pmos=current_w_pmos + step
-	let index=index + 1
+***** Start varying nmos widths ****
+while current_w_nmos <= final_w_nmos
+  let current_w_pmos=10
 
-	end
+  alter m.xm1.msky130_fd_pr__nfet_01v8 W=current_w_nmos
 
-set plotstr = ( $plotstr \{$curplot\}.v(in) )
+**** Start varying pmos widths ******
+  while current_w_pmos < final_w_pmos
+
+    alter m.xm2.msky130_fd_pr__pfet_01v8 W=current_w_pmos
+
+******* Asymmetricity simulation with pulse of 50n with 1/2 duty cycle ********
+    tran 10p 50n 
+
+    meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
+    meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
+    
+    let asymmetricity[index_pmos] = abs( $&rise_time - $&fall_time ) 
+
+
+
+******* Switching point simulation ********
+    dc vin 0 1.8 1m 
+
+    meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
+
+    let switching_points[index_pmos] = $&switching_point
+    let width_pmos[index_pmos] = current_w_pmos
+
+    let current_w_pmos=current_w_pmos + step_pmos
+    let index_pmos=index_pmos + 1
+
+  end
+
+**** Stop varying pmos widths ******
+
+
+
+******* Find switching point at most symmetric w (this is per nmos iteration) ********
+  let lowest_asym = 100
+  let best_w_index = 0 
+  let iterate_pmos = 0
+  let tolerance = 1p 
+ * We let the asymmetricity be plus/minus 1p of 0 
+
+  repeat $&total_iterations_pmos 
+
+    let asym = abs(asymmetricity[iterate_pmos] - 1p)
+    let current_w_pmos = width_pmos[iterate_pmos]
+
+    if asym < lowest_asym 
+      let best_w_index = iterate_pmos
+      let lowest_asym = asym
+    end
+    
+    let iterate_pmos = iterate_pmos + 1
+  end
+
+* Now that we have the best width, we now need to move towards getting the switching point
+
+* Select the cream of the crop 
+  let net_switching_points[index_nmos] = switching_points[best_w_index]
+  let net_asymmetricity[index_nmos] = asymmetricity[best_w_index]
+
+* Associate it to the nmos value
+  let width_nmos[index_nmos] = current_w_nmos
+
+
+
+  let index_nmos = index_nmos + 1
+  let current_w_nmos = current_w_nmos + step_nmos
+
+end
+
+**** Stop varying nmos widths **** 
 
 set nolegend
 
 ******* Plot results ********
-plot switching_points vs width title 'switching points vs time' xlabel 'width' ylabel 'Switching point (V)'
-plot asymmetricity vs width title 'asymmetricity vs time' xlabel 'width' ylabel 'Difference in rise/fall'
+plot net_switching_points vs width_nmos
+plot net_asymmetricity vs width_nmos
+.endc
+"
+}
+C {devices/code.sym} 655 -260 0 0 {name=VARY_NMOS only_toplevel=true spice_ignore=false value="
+*.options savecurrents
 
-plot $plotstr
+.control
+let step_nmos=1
+let step_pmos=1
 
-******* Find switching point at most symmetric w ********
-let lowest_asym = 100
-let best_w_index = 0 ; Find most symmetric w
-let index = 0
-let tolerance = 1p ; We let the asymmetricity be plus/minus 1p of 0 
+let index_nmos=0
+let index_pmos= 0
 
-repeat $&total_iterations 
+let final_w_nmos=13
+let final_w_pmos=60
 
-  let asym = abs(asymmetricity[index] - 1p)
-  let current_w_pmos = width[index]
+let current_w_nmos=10
 
-  if asym < lowest_asym ; If we have something smaller, set it as the best goal and repeat
-    let best_w_index = index
-    let lowest_asym = asym
+let total_iterations_nmos = ceil((final_w_nmos - current_w_nmos)/step_nmos)
+let total_iterations_pmos = ceil((final_w_pmos - current_w_pmos)/step_pmos)
+
+let net_swiching_points = vector(total_iterations_nmos)
+let net_asymmetricity = vector(total_iterations_nmos)
+let width_nmos = vector(total_iterations_nmos)
+
+
+let switching_points = vector(total_iterations_pmos)
+let asymmetricity = vector(total_iterations_pmos)
+let width_pmos = vector(total_iterations_pmos)
+
+
+***** Start varying nmos widths ****
+while current_w_nmos <= final_w_nmos
+  let current_w_pmos=10
+
+  alter m.xm1.msky130_fd_pr__nfet_01v8 W=current_w_nmos
+
+**** Start varying pmos widths ******
+  while current_w_pmos < final_w_pmos
+
+    alter m.xm2.msky130_fd_pr__pfet_01v8 W=current_w_pmos
+
+******* Asymmetricity simulation with pulse of 50n with 1/2 duty cycle ********
+    tran 10p 50n 
+
+    meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
+    meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
+    
+    let asymmetricity[index_pmos] = abs( $&rise_time - $&fall_time ) 
+
+
+
+******* Switching point simulation ********
+    dc vin 0 1.8 1m 
+
+    meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
+
+    let switching_points[index_pmos] = $&switching_point
+    let width_pmos[index_pmos] = current_w_pmos
+
+    let current_w_pmos=current_w_pmos + step_pmos
+    let index_pmos=index_pmos + 1
 
   end
-  
-  let index = index + 1
-end
+
+**** Stop varying pmos widths ******
+
+
+
+******* Find switching point at most symmetric w (this is per nmos iteration) ********
+  let lowest_asym = 100
+  let best_w_index = 0 
+  let iterate_pmos = 0
+  let tolerance = 1p 
+ * We let the asymmetricity be plus/minus 1p of 0 
+
+  repeat $&total_iterations_pmos 
+
+    let asym = abs(asymmetricity[iterate_pmos] - 1p)
+    let current_w_pmos = width_pmos[iterate_pmos]
+
+    if asym < lowest_asym 
+      let best_w_index = iterate_pmos
+      let lowest_asym = asym
+    end
+    
+    let iterate_pmos = iterate_pmos + 1
+  end
 
 * Now that we have the best width, we now need to move towards getting the switching point
 
-let chosen_switching_point = switching_points[best_w_index]
+* Select the cream of the crop 
+  let net_switching_points[index_nmos] = switching_points[best_w_index]
+  let net_asymmetricity[index_nmos] = asymmetricity[best_w_index]
 
+* Associate it to the nmos value
+  let width_nmos[index_nmos] = current_w_nmos
+
+
+
+  let index_nmos = index_nmos + 1
+  let current_w_nmos = current_w_nmos + step_nmos
+
+end
+
+**** Stop varying nmos widths **** 
+
+set nolegend
+
+******* Plot results ********
+plot net_switching_points vs width_nmos
+plot net_asymmetricity vs width_nmos
 .endc
 "
-
-
-
-
 }
