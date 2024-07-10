@@ -167,15 +167,16 @@ let tolerance = 1p ; We let the asymmetricity be plus/minus 1p of 0
 
 repeat $&iters 
 
-	let asym = abs(diffs[iter] - 1p)
-	let curr_w = width[iter]
+  let asym = abs(diffs[iter] - 1p)
+  let curr_w = width[iter]
 
-	if asym < lowest_asym ; If we have something smaller, set it as the best goal and repeat
-	best_w_index = iter
-	lowest_asym = asym
-	end
+  if asym < lowest_asym ; If we have something smaller, set it as the best goal and repeat
+    let best_w_index = iter
+    let lowest_asym = asym
+
+  end
   
-	let iter = iter + 1
+  let iter = iter + 1
 end
 
 * Now that we have the best width, we now need to move towards getting the switching point
