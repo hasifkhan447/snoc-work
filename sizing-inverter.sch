@@ -42,19 +42,6 @@ N 465 -250 465 -220 {
 lab=OUT}
 N 465 -160 465 -120 {
 lab=GND}
-C {devices/code.sym} 830 -300 0 0 {name=sweep only_toplevel=true spice_ignore=true value="
-
-.options savecurrents
-
-.control
-save all
-dc vin 0 1.8 0.01
-
-write characterization.raw
-
-set appendwrite
-.endc
-"}
 C {sky130_fd_pr/corner.sym} 830 -470 0 0 {name=CORNER only_toplevel=true corner=tt}
 C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
 C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
@@ -101,27 +88,27 @@ value=100f
 footprint=1206
 device="ceramic capacitor"}
 C {devices/gnd.sym} 465 -120 0 0 {name=l3 lab=GND}
-C {devices/code.sym} 612.5 -260 0 0 {name=STIMULUS1 only_toplevel=true spice_ignore=false value="
+C {devices/code.sym} 827.5 -260 0 0 {name=FIXED_NMOS only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
 .control
 save all
 
 let step=1
-let max_w=80
-let curr_w=10
+let final_w_pmos=80
+let current_w_pmos=10
 
-let iters = ceil((max_w - curr_w)/step)
-let iter = 0
+let total_iterations = ceil((final_w_pmos - current_w_pmos)/step)
+let index= 0
 
-let switching_points = vector(iters)
-let diffs = vector(iters)
-let width = vector(iters)
+let switching_points = vector(total_iterations)
+let asymmetricity = vector(total_iterations)
+let width = vector(total_iterations)
 
 
-while curr_w < max_w
+while current_w_pmos < final_w_pmos
 
-	alter m.xm2.msky130_fd_pr__pfet_01v8 W=curr_w
+	alter m.xm2.msky130_fd_pr__pfet_01v8 W=current_w_pmos
 
 ******* Asymmetricity analysis ********
 	tran 10p 50n ; Run transient analysis using a symmetric pulse of period 25n
@@ -129,7 +116,7 @@ while curr_w < max_w
 	meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
 	meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
 	
-	let diffs[iter] = abs( $&rise_time - $&fall_time ) ; Create array of diffs
+	let asymmetricity[index] = abs( $&rise_time - $&fall_time ) ; Create array of diffs
 
 
 
@@ -140,12 +127,12 @@ while curr_w < max_w
 	set plotstr = ( $plotstr \{$curplot\}.v(out) )  
 	set global_switching_point = $&switching_point
 
-	let switching_points[iter] = $&switching_point
-	let width[iter] = curr_w
+	let switching_points[index] = $&switching_point
+	let width[index] = current_w_pmos
 
 
-	let curr_w=curr_w + step
-	let iter=iter + 1
+	let current_w_pmos=current_w_pmos + step
+	let index=index + 1
 
 	end
 
@@ -155,28 +142,28 @@ set nolegend
 
 ******* Plot results ********
 plot switching_points vs width title 'switching points vs time' xlabel 'width' ylabel 'Switching point (V)'
-plot diffs vs width title 'asymmetricity vs time' xlabel 'width' ylabel 'Difference in rise/fall'
+plot asymmetricity vs width title 'asymmetricity vs time' xlabel 'width' ylabel 'Difference in rise/fall'
 
 plot $plotstr
 
 ******* Find switching point at most symmetric w ********
 let lowest_asym = 100
 let best_w_index = 0 ; Find most symmetric w
-let iter = 0
+let index = 0
 let tolerance = 1p ; We let the asymmetricity be plus/minus 1p of 0 
 
-repeat $&iters 
+repeat $&total_iterations 
 
-  let asym = abs(diffs[iter] - 1p)
-  let curr_w = width[iter]
+  let asym = abs(asymmetricity[index] - 1p)
+  let current_w_pmos = width[index]
 
   if asym < lowest_asym ; If we have something smaller, set it as the best goal and repeat
-    let best_w_index = iter
+    let best_w_index = index
     let lowest_asym = asym
 
   end
   
-  let iter = iter + 1
+  let index = index + 1
 end
 
 * Now that we have the best width, we now need to move towards getting the switching point
