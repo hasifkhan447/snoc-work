@@ -6,67 +6,73 @@ save all
 
 setplot const
 let nmos_index = 0
-let nmos_initial = 10
-let nmos_w = nmos_initial
+let nmos_w = 5
 let nmos_final = 30
-let nmos_step = 1
+let nmos_step = 2
 
-let nmos_length = ceil((nmos_final - nmos_initial)/nmos_step)
+let nmos_length = ceil((nmos_final - nmos_w)/nmos_step)
 
-let pmos_index = 0
-let pmos_initial = 10
+let pmos_initial = 20
 let pmos_w = pmos_initial
-let pmos_final = 30
+let pmos_final = 80
 let pmos_step = 5
+
+let switching_points = vector(nmos_length)
+let asymmetricity = vector(nmos_length)
+let pmos_width = vector(nmos_length)
+let nmos_width = vector(nmos_length)
 
 while nmos_w < nmos_final 
 
-  alter @m.xm1.msky130_fd_pr__nfet_01v8[w] = nmos_w
+  alter m.xm1.msky130_fd_pr__nfet_01v8 W = nmos_w
 
-  setplot const
-  let switching_points = vector(nmos_length)
-  let asymmetricity = vector(nmos_length)
-  let width = vector(nmos_length)
 
   let minimum_asym = 100
   let minimum_width_pmos = 100
 
+  let pmos_w = pmos_initial
+
 **** Find least asymmetric pmos_w **** 
   while pmos_w < pmos_final
 
-    alter @m.xm2.msky130_fd_pr__pfet_01v8[w] = pmos_w
-
-    tran 10p 50n ; Run transient analysis using a symmetric pulse of period 25n
+    alter m.xm2.msky130_fd_pr__pfet_01v8 W = pmos_w
+* Run transient analysis using a symmetric pulse of period 25n
+    tran 10p 50n 
 
     meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
     meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
-    
-    let diff = abs( $&rise_time - $&fall_time ) ; Create array of diffs
+* Create array of diffs
+    let diff = abs( $&rise_time - $&fall_time ) 
 
     if diff < minimum_asym
       let minimum_asym = diff       
       let minimum_width_pmos = pmos_w
     end
+    print diff minimum_asym minimum_width_pmos pmos_w
+    print nmos_w pmos_w
     let pmos_w = pmos_w + pmos_step
   end
 
-  alter @m.xm2.msky130_fd_pr__pfet_01v8[W] = minimum_width_pmos
+  alter m.xm2.msky130_fd_pr__pfet_01v8 W = minimum_width_pmos
 
 **** Find switching point for aforementioned pmos_w ****
 
-  dc vin 0 1.8 1m ; Run dc analysis, check for operating point
+  dc vin 0 1.8 1m 
 
   meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
 
   let switching_points[nmos_index] = $&switching_point
-  let width[nmos_index] = minimum_width_pmos 
+  let pmos_width[nmos_index] = minimum_width_pmos 
+  let nmos_width[nmos_index] = nmos_w 
   print nmos_index minimum_width_pmos 
 
   let nmos_w = nmos_w + nmos_step
   let nmos_index = nmos_index + 1
 end
 
-plot switching_points vs width
+plot switching_points vs nmos_width 
+plot pmos_width vs nmos_width 
 
 .endc
 "
+
