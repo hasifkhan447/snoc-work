@@ -1,4 +1,5 @@
-name=FIXED_NMOS only_toplevel=true spice_ignore=false value="
+
+name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
 .control
@@ -6,19 +7,21 @@ save all
 
 setplot const
 let nmos_index = 0
-let nmos_w = 5
-let nmos_final = 30
+let nmos_w = 1
+let nmos_final = 10
 let nmos_step = 1
 
 let nmos_length = ceil((nmos_final - nmos_w)/nmos_step)
 
-let pmos_initial = 20
+let pmos_initial = 1
 let pmos_w = pmos_initial
-let pmos_final = 80
+let pmos_final = 40
 let pmos_step = 1
 
 let switching_points = vector(nmos_length)
 let asymmetricity = vector(nmos_length)
+let Rdon_pmos = vector(nmos_length)
+let Rdon_nmos = vector(nmos_length)
 let pmos_width = vector(nmos_length)
 let nmos_width = vector(nmos_length)
 
@@ -37,9 +40,9 @@ while nmos_w < nmos_final
 
     alter m.xm2.msky130_fd_pr__pfet_01v8 W = pmos_w
 * Run transient analysis using a symmetric pulse of period 25n
-    tran 10p 50n 
+    tran 10p 40n 
 
-    meas tran rise_time TRIG v(out) VAL=0.1 RISE=1 TARG v(out) VAL=1.62 RISE=1 
+    meas tran rise_time TRIG v(out) VAL=0.1 RISE=LAST TARG v(out) VAL=1.62 RISE=LAST
     meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
 * Create array of diffs
     let diff = abs( $&rise_time - $&fall_time ) 
@@ -67,6 +70,19 @@ while nmos_w < nmos_final
   let asymmetricity[nmos_index] = minimum_asym
   print nmos_index minimum_width_pmos 
 
+
+**** Run trainsient again to get rise fall time ****
+  tran 10p 40n 
+*** Second rise because transient artifacts are technically rises and falls
+  meas tran tau_rise TRIG v(out) VAL=0 RISE=LAST TARG v(out) VAL=1.376 RISE=LAST
+  meas tran tau_fall TRIG v(out) VAL=1.8 FALL=1 TARG v(out) VAL=0.6624 FALL=1
+
+
+  let Rdon_nmos[nmos_index] = tau_fall/200f
+  let Rdon_pmos[nmos_index] = tau_rise/200f
+
+
+
   let nmos_w = nmos_w + nmos_step
   let nmos_index = nmos_index + 1
 end
@@ -74,7 +90,11 @@ end
 plot switching_points vs nmos_width 
 plot pmos_width vs nmos_width 
 plot asymmetricity vs nmos_width 
+plot Rdon_pmos Rdon_nmos vs nmos_width 
 
 .endc
 "
+
+
+
 
