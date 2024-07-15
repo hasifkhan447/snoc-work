@@ -1,4 +1,3 @@
-
 name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
@@ -24,6 +23,9 @@ let Rdon_pmos = vector(nmos_length)
 let Rdon_nmos = vector(nmos_length)
 let pmos_width = vector(nmos_length)
 let nmos_width = vector(nmos_length)
+
+set tranplots = ' '
+set swplots = ' '
 
 while nmos_w < nmos_final 
 
@@ -58,6 +60,19 @@ while nmos_w < nmos_final
 
   alter m.xm2.msky130_fd_pr__pfet_01v8 W = minimum_width_pmos
 
+
+**** Run trainsient again to get rise fall time ****
+  tran 10p 40n 
+*** Second rise because transient artifacts are technically rises and falls
+  meas tran tau_rise TRIG v(out) VAL=0 RISE=LAST TARG v(out) VAL=1.376 RISE=LAST
+  meas tran tau_fall TRIG v(out) VAL=1.8 FALL=1 TARG v(out) VAL=0.6624 FALL=1
+
+
+  let Rdon_nmos[nmos_index] = tau_fall/200f
+  let Rdon_pmos[nmos_index] = tau_rise/200f
+
+  set tranplots = ( $tranplots {$curplot}.v(out) )
+
 **** Find switching point for aforementioned pmos_w ****
 
   dc vin 0 1.8 1m 
@@ -70,27 +85,26 @@ while nmos_w < nmos_final
   let asymmetricity[nmos_index] = minimum_asym
   print nmos_index minimum_width_pmos 
 
-
-**** Run trainsient again to get rise fall time ****
-  tran 10p 40n 
-*** Second rise because transient artifacts are technically rises and falls
-  meas tran tau_rise TRIG v(out) VAL=0 RISE=LAST TARG v(out) VAL=1.376 RISE=LAST
-  meas tran tau_fall TRIG v(out) VAL=1.8 FALL=1 TARG v(out) VAL=0.6624 FALL=1
-
-
-  let Rdon_nmos[nmos_index] = tau_fall/200f
-  let Rdon_pmos[nmos_index] = tau_rise/200f
-
+  set swplots = ( $swplots {$curplot}.v(out) )
 
 
   let nmos_w = nmos_w + nmos_step
   let nmos_index = nmos_index + 1
 end
 
-plot switching_points vs nmos_width 
-plot pmos_width vs nmos_width 
-plot asymmetricity vs nmos_width 
-plot Rdon_pmos Rdon_nmos vs nmos_width 
+set swplots = ( $swplots {$curplot}.v(in) )
+
+plot switching_points vs nmos_width title 'Switching points vs width' xlabel 'W_n' ylabel 'Switching point'
+plot pmos_width vs nmos_width title 'Optimal pmos width per nmos width' xlabel 'W_n' ylabel 'Least asym W_p'
+plot asymmetricity vs nmos_width  title 'Least asymmetricity per nmos width' xlabel 'W_n' ylabel 'Least asym'
+plot Rdon_pmos Rdon_nmos vs nmos_width title 'Rdon_nmos and pmos per nmos width' xlabel 'W_n' ylabel 'R_don'
+
+set nolegend
+
+plot $swplots xlimit 800m 1 title 'Switching point envelope' 
+plot $tranplots xlimit 1n 3n title 'Transient fall envelope'
+plot $tranplots xlimit 26n 28n title 'Transient rise envelope'
+
 
 .endc
 "

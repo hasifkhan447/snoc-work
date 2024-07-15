@@ -5,7 +5,7 @@ V {}
 S {}
 E {}
 N 360 -260 360 -240 {
-lab=OUT}
+lab=#net1}
 N 320 -290 320 -210 {
 lab=IN}
 N 300 -250 320 -250 {
@@ -14,8 +14,6 @@ N 360 -360 360 -320 {
 lab=VDD}
 N 270 -250 300 -250 {
 lab=IN}
-N 360 -250 480 -250 {
-lab=OUT}
 N 20 -156.25 20 -83.75 {
 lab=GND}
 N 125 -122.5 125 -50 {
@@ -38,14 +36,17 @@ N 380 -320 380 -290 {
 lab=VDD}
 N 360 -320 380 -320 {
 lab=VDD}
-N 465 -250 465 -220 {
+N 550 -250 550 -220 {
 lab=OUT}
-N 465 -160 465 -120 {
+N 550 -160 550 -120 {
 lab=GND}
+N 360 -250 490 -250 {
+lab=#net1}
+N 550 -250 570 -250 {
+lab=OUT}
 C {sky130_fd_pr/corner.sym} 830 -470 0 0 {name=CORNER only_toplevel=true corner=tt}
 C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
 C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
-C {devices/opin.sym} 480 -250 2 1 {name=p3 lab=OUT}
 C {devices/vsource.sym} 20 -186.25 0 0 {name=Vin value="PULSE(0 1.8 1n 0 0 25n 50n)"}
 C {devices/gnd.sym} 20 -83.75 0 0 {name=l5 lab=GND}
 C {devices/vsource.sym} 125 -152.5 0 0 {name=Vdd value=1.8}
@@ -82,14 +83,7 @@ sa=0 sb=0 sd=0
 model=pfet_01v8
 spiceprefix=X
 }
-C {devices/capa.sym} 465 -190 0 0 {name=C1
-m=1
-value=200f
-footprint=1206
-device="ceramic capacitor"}
-C {devices/gnd.sym} 465 -120 0 0 {name=l3 lab=GND}
-C {devices/code.sym} 655 -260 0 0 {
-name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
+C {devices/code.sym} 655 -260 0 0 {name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
 .control
@@ -97,8 +91,8 @@ save all
 
 setplot const
 let nmos_index = 0
-let nmos_w = 1
-let nmos_final = 10
+let nmos_w = 0.5
+let nmos_final = 20 
 let nmos_step = 1
 
 let nmos_length = ceil((nmos_final - nmos_w)/nmos_step)
@@ -114,6 +108,9 @@ let Rdon_pmos = vector(nmos_length)
 let Rdon_nmos = vector(nmos_length)
 let pmos_width = vector(nmos_length)
 let nmos_width = vector(nmos_length)
+
+set tranplots = ' '
+set swplots = ' '
 
 while nmos_w < nmos_final 
 
@@ -148,6 +145,19 @@ while nmos_w < nmos_final
 
   alter m.xm2.msky130_fd_pr__pfet_01v8 W = minimum_width_pmos
 
+
+**** Run trainsient again to get rise fall time ****
+  tran 10p 40n 
+*** Second rise because transient artifacts are technically rises and falls
+  meas tran tau_rise TRIG v(out) VAL=0 RISE=LAST TARG v(out) VAL=1.376 RISE=LAST
+  meas tran tau_fall TRIG v(out) VAL=1.8 FALL=1 TARG v(out) VAL=0.6624 FALL=1
+
+
+  let Rdon_nmos[nmos_index] = tau_fall/200f
+  let Rdon_pmos[nmos_index] = tau_rise/200f
+
+  set tranplots = ( $tranplots \{$curplot\}.v(out) )
+
 **** Find switching point for aforementioned pmos_w ****
 
   dc vin 0 1.8 1m 
@@ -160,27 +170,26 @@ while nmos_w < nmos_final
   let asymmetricity[nmos_index] = minimum_asym
   print nmos_index minimum_width_pmos 
 
-
-**** Run trainsient again to get rise fall time ****
-  tran 10p 40n 
-*** Second rise because transient artifacts are technically rises and falls
-  meas tran tau_rise TRIG v(out) VAL=0 RISE=LAST TARG v(out) VAL=1.376 RISE=LAST
-  meas tran tau_fall TRIG v(out) VAL=1.8 FALL=1 TARG v(out) VAL=0.6624 FALL=1
-
-
-  let Rdon_nmos[nmos_index] = tau_fall/200f
-  let Rdon_pmos[nmos_index] = tau_rise/200f
-
+  set swplots = ( $swplots \{$curplot\}.v(out) )
 
 
   let nmos_w = nmos_w + nmos_step
   let nmos_index = nmos_index + 1
 end
 
-plot switching_points vs nmos_width 
-plot pmos_width vs nmos_width 
-plot asymmetricity vs nmos_width 
-plot Rdon_pmos Rdon_nmos vs nmos_width 
+set swplots = ( $swplots \{$curplot\}.v(in) )
+
+plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' 
+plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' 
+plot asymmetricity vs nmos_width  xlabel 'W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' 
+plot Rdon_pmos Rdon_nmos vs nmos_width xlabel 'W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' 
+
+set nolegend
+
+plot $swplots xlimit 800m 1 title 'Switching point envelope' 
+plot $tranplots xlimit 1n 3n title 'Transient fall envelope'
+plot $tranplots xlimit 26n 28n title 'Transient rise envelope'
+
 
 .endc
 "
@@ -217,3 +226,15 @@ plot v(in) v(out)
 
 
 }
+C {devices/opin.sym} 565 -250 2 1 {name=p3 lab=OUT}
+C {devices/capa.sym} 550 -190 0 0 {name=C1
+m=1
+value=200f
+footprint=1206
+device="ceramic capacitor"}
+C {devices/gnd.sym} 550 -120 0 0 {name=l3 lab=GND}
+C {devices/res.sym} 520 -250 1 0 {name=R1
+value=470
+footprint=1206
+device=resistor
+m=1}
