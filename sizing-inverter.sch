@@ -222,7 +222,7 @@ while nmos_w < nmos_final
 
   dc vin 0 1.8 1m 
 
-  meas dc switching_point WHEN v(out)=v(in) CROSS=1
+  meas dc switching_point WHEN v(out)=0.9 CROSS=1
 
   let switching_points[nmos_index] = $&switching_point
   let pmos_width[nmos_index] = minimum_width_pmos 
@@ -239,14 +239,11 @@ end
 
 set swplots = ( $swplots \{$curplot\}.v(in) )
 
-set color2=red
-set color3=blue
-
 plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot
 plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' pointplot
 plot asymmetricity vs nmos_width  xlabel 'W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' pointplot
 plot Rdon_pmos Rdon_nmos vs nmos_width xlabel 'W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' pointplot
-plot rise_times fall_times vs nmos_width
+plot rise_times fall_times vs nmos_width nointerp
 
 set nolegend
 
