@@ -157,6 +157,7 @@ let Rdon_pmos = vector(nmos_length)
 let Rdon_nmos = vector(nmos_length)
 let rise_times = vector(nmos_length)
 let fall_times = vector(nmos_length)
+let propagation_delay = vector(nmos_length)
 let ratio = vector(nmos_length)
 let nmos_width = vector(nmos_length)
 
@@ -170,7 +171,7 @@ while nmos_w < nmos_final
   alter m.xm5.msky130_fd_pr__nfet_01v8 W = e * e * nmos_w
 
 
-  let minimum_asym = 100
+  let minimum_delay = 100
   let minimum_width_pmos = 100
 
   let pmos_w = pmos_initial
@@ -188,13 +189,13 @@ while nmos_w < nmos_final
     meas tran rise_time TRIG v(out) VAL=0.1 RISE=LAST TARG v(out) VAL=1.62 RISE=LAST
     meas tran fall_time TRIG v(out) VAL=1.62 FALL=1 TARG v(out) VAL=0.1 FALL=1
 * Create array of diffs
-    let diff = abs( $&rise_time - $&fall_time ) 
+    let prop_delay = ( $&rise_time + $&fall_time )/2
 
-    if diff < minimum_asym
-      let minimum_asym = diff       
+    if prop_delay < minimum_delay
+      let minimum_delay = prop_delay       
       let minimum_width_pmos = pmos_w
     end
-    print diff minimum_asym minimum_width_pmos pmos_w
+    print prop_delay prop_delay minimum_width_pmos pmos_w
     print nmos_w pmos_w
     let pmos_w = pmos_w + pmos_step
   end
@@ -213,8 +214,7 @@ while nmos_w < nmos_final
 
   let Rdon_nmos[nmos_index] = tau_fall/200f
   let Rdon_pmos[nmos_index] = tau_rise/200f
-  let fall_times[nmos_index] = tau_fall * 5/50n
-  let rise_times[nmos_index] = tau_rise * 5/50n
+  let propagation_delay[nmos_index] = minimum_delay
 
   set tranplots = ( $tranplots \{$curplot\}.v(out) )
 
@@ -227,7 +227,7 @@ while nmos_w < nmos_final
   let switching_points[nmos_index] = $&switching_point
   let ratio[nmos_index] = minimum_width_pmos/nmos_w
   let nmos_width[nmos_index] = nmos_w 
-  let asymmetricity[nmos_index] = minimum_asym
+  let propagation_delay[nmos_index] = minimum_delay
   print nmos_index minimum_width_pmos 
 
   set swplots = ( $swplots \{$curplot\}.v(out) )
@@ -239,11 +239,10 @@ end
 
 set swplots = ( $swplots \{$curplot\}.v(in) )
 
-plot switching_points vs ratio xlabel 'W_p/W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot 
-plot asymmetricity vs ratio  xlabel 'W_p/W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' pointplot 
-plot Rdon_pmos Rdon_nmos vs ratio xlabel 'W_p/W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' pointplot 
-plot rise_times fall_times vs ratio  xlabel 'W_p/W_n' ylabel 'percentage of clock taken to rise' pointplot 
-plot nmos_w vs ratio xlabel 'W_p/W_n' ylabel 'W_p' pointplot 
+plot switching_points vs ratio xlabel 'W_p/W_n' ylabel 'Switching point' pointplot 
+plot Rdon_pmos Rdon_nmos vs ratio xlabel 'W_p/W_n' ylabel 'R_don' pointplot 
+plot propagation_delay vs ratio  xlabel 'W_p/W_n' ylabel 'Propagation delay' pointplot 
+plot ratio vs nmos_width xlabel 'W_n' ylabel 'W_p/W_n' pointplot 
 
 set nolegend
 
@@ -254,6 +253,12 @@ set nolegend
 
 .endc
 "
+
+
+
+
+
+
 
 
 
