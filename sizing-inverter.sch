@@ -140,13 +140,13 @@ save all
 
 setplot const
 let nmos_index = 0
-let nmos_w = 0.5
+let nmos_w = 10
 let nmos_final = 20 
 let nmos_step = 1
 
 let nmos_length = ceil((nmos_final - nmos_w)/nmos_step)
 
-let pmos_initial = 1
+let pmos_initial = nmos_w
 let pmos_w = pmos_initial
 let pmos_final = 40
 let pmos_step = 1
@@ -157,7 +157,7 @@ let Rdon_pmos = vector(nmos_length)
 let Rdon_nmos = vector(nmos_length)
 let rise_times = vector(nmos_length)
 let fall_times = vector(nmos_length)
-let pmos_width = vector(nmos_length)
+let ratio = vector(nmos_length)
 let nmos_width = vector(nmos_length)
 
 set tranplots = ' '
@@ -213,8 +213,8 @@ while nmos_w < nmos_final
 
   let Rdon_nmos[nmos_index] = tau_fall/200f
   let Rdon_pmos[nmos_index] = tau_rise/200f
-  let fall_times[nmos_index] = tau_fall * 5
-  let rise_times[nmos_index] = tau_rise * 5
+  let fall_times[nmos_index] = tau_fall * 5/50n
+  let rise_times[nmos_index] = tau_rise * 5/50n
 
   set tranplots = ( $tranplots \{$curplot\}.v(out) )
 
@@ -225,7 +225,7 @@ while nmos_w < nmos_final
   meas dc switching_point WHEN v(out)=0.9 CROSS=1
 
   let switching_points[nmos_index] = $&switching_point
-  let pmos_width[nmos_index] = minimum_width_pmos 
+  let ratio[nmos_index] = minimum_width_pmos/nmos_w
   let nmos_width[nmos_index] = nmos_w 
   let asymmetricity[nmos_index] = minimum_asym
   print nmos_index minimum_width_pmos 
@@ -239,17 +239,17 @@ end
 
 set swplots = ( $swplots \{$curplot\}.v(in) )
 
-plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot
-plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' pointplot
-plot asymmetricity vs nmos_width  xlabel 'W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' pointplot
-plot Rdon_pmos Rdon_nmos vs nmos_width xlabel 'W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' pointplot
-plot rise_times fall_times vs nmos_width nointerp
+plot switching_points vs ratio xlabel 'W_p/W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot 
+plot asymmetricity vs ratio  xlabel 'W_p/W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' pointplot 
+plot Rdon_pmos Rdon_nmos vs ratio xlabel 'W_p/W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' pointplot 
+plot rise_times fall_times vs ratio  xlabel 'W_p/W_n' ylabel 'percentage of clock taken to rise' pointplot 
+plot nmos_w vs ratio xlabel 'W_p/W_n' ylabel 'W_p' pointplot 
 
 set nolegend
 
-plot $swplots xlimit 800m 1 title 'Switching point envelope' 
-plot $tranplots xlimit 1n 3n title 'Transient fall envelope'
-plot $tranplots xlimit 26n 28n title 'Transient rise envelope'
+*plot $swplots xlimit 800m 1 title 'Switching point envelope' 
+*plot $tranplots xlimit 1n 3n title 'Transient fall envelope'
+*plot $tranplots xlimit 26n 28n title 'Transient rise envelope'
 
 
 .endc
