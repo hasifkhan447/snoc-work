@@ -41,8 +41,6 @@ N 790 -250 790 -220 {
 lab=OUT}
 N 790 -160 790 -120 {
 lab=GND}
-N 600 -250 730 -250 {
-lab=#net2}
 N 790 -250 810 -250 {
 lab=OUT}
 N 510 -260 510 -240 {
@@ -65,12 +63,36 @@ N 510 -320 530 -320 {
 lab=VDD}
 N 360 -250 470 -250 {
 lab=#net1}
-N 510 -250 600 -250 {
-lab=#net2}
 N 360 -340 510 -340 {
 lab=VDD}
 N 510 -340 510 -320 {
 lab=VDD}
+N 660 -260 660 -240 {
+lab=#net3}
+N 620 -290 620 -210 {
+lab=#net2}
+N 660 -180 660 -100 {
+lab=GND}
+N 660 -210 685 -210 {
+lab=GND}
+N 685 -210 685 -180 {
+lab=GND}
+N 660 -180 685 -180 {
+lab=GND}
+N 660 -290 680 -290 {
+lab=VDD}
+N 680 -320 680 -290 {
+lab=VDD}
+N 660 -320 680 -320 {
+lab=VDD}
+N 660 -340 660 -320 {
+lab=VDD}
+N 510 -250 620 -250 {
+lab=#net2}
+N 510 -340 660 -340 {
+lab=VDD}
+N 660 -250 730 -250 {
+lab=#net3}
 C {sky130_fd_pr/corner.sym} 180 -600 0 0 {name=CORNER only_toplevel=true corner=tt}
 C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
 C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
@@ -145,6 +167,7 @@ while nmos_w < nmos_final
 
   alter m.xm1.msky130_fd_pr__nfet_01v8 W = nmos_w
   alter m.xm3.msky130_fd_pr__nfet_01v8 W = e *nmos_w
+  alter m.xm5.msky130_fd_pr__nfet_01v8 W = e * e * nmos_w
 
 
   let minimum_asym = 100
@@ -157,6 +180,7 @@ while nmos_w < nmos_final
 
     alter m.xm2.msky130_fd_pr__pfet_01v8 W = pmos_w
     alter m.xm4.msky130_fd_pr__pfet_01v8 W = e * pmos_w
+    alter m.xm4.msky130_fd_pr__pfet_01v8 W = e * e * pmos_w
 
 * Run transient analysis using a symmetric pulse of period 25n
     tran 10p 40n 
@@ -177,6 +201,7 @@ while nmos_w < nmos_final
 
   alter m.xm2.msky130_fd_pr__pfet_01v8 W = minimum_width_pmos
   alter m.xm4.msky130_fd_pr__pfet_01v8 W = e *minimum_width_pmos
+  alter m.xm6.msky130_fd_pr__pfet_01v8 W = e * e * minimum_width_pmos
 
 
 **** Run trainsient again to get rise fall time ****
@@ -213,6 +238,9 @@ while nmos_w < nmos_final
 end
 
 set swplots = ( $swplots \{$curplot\}.v(in) )
+
+set color2=red
+set color3=blue
 
 plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot
 plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' pointplot
@@ -290,6 +318,35 @@ model=nfet_01v8
 spiceprefix=X
 }
 C {sky130_fd_pr/pfet_01v8.sym} 490 -290 0 0 {name=M4
+W=30
+L=0.15
+nf=1
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=pfet_01v8
+spiceprefix=X
+}
+C {devices/gnd.sym} 660 -100 0 0 {name=l6 lab=GND}
+C {sky130_fd_pr/nfet_01v8.sym} 640 -210 0 0 {name=M5
+W=30
+L=0.16
+nf=1 
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=nfet_01v8
+spiceprefix=X
+}
+C {sky130_fd_pr/pfet_01v8.sym} 640 -290 0 0 {name=M6
 W=30
 L=0.15
 nf=1
