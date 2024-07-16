@@ -1,4 +1,5 @@
-v {xschem version=3.1.0 file_version=1.2 }
+v {xschem version=3.4.5 file_version=1.2
+}
 G {}
 K {}
 V {}
@@ -36,15 +37,41 @@ N 380 -320 380 -290 {
 lab=VDD}
 N 360 -320 380 -320 {
 lab=VDD}
-N 550 -250 550 -220 {
+N 790 -250 790 -220 {
 lab=OUT}
-N 550 -160 550 -120 {
+N 790 -160 790 -120 {
 lab=GND}
-N 360 -250 490 -250 {
-lab=#net1}
-N 550 -250 570 -250 {
+N 600 -250 730 -250 {
+lab=#net2}
+N 790 -250 810 -250 {
 lab=OUT}
-C {sky130_fd_pr/corner.sym} 830 -470 0 0 {name=CORNER only_toplevel=true corner=tt}
+N 510 -260 510 -240 {
+lab=#net2}
+N 470 -290 470 -210 {
+lab=#net1}
+N 510 -180 510 -100 {
+lab=GND}
+N 510 -210 535 -210 {
+lab=GND}
+N 535 -210 535 -180 {
+lab=GND}
+N 510 -180 535 -180 {
+lab=GND}
+N 510 -290 530 -290 {
+lab=VDD}
+N 530 -320 530 -290 {
+lab=VDD}
+N 510 -320 530 -320 {
+lab=VDD}
+N 360 -250 470 -250 {
+lab=#net1}
+N 510 -250 600 -250 {
+lab=#net2}
+N 360 -340 510 -340 {
+lab=VDD}
+N 510 -340 510 -320 {
+lab=VDD}
+C {sky130_fd_pr/corner.sym} 180 -600 0 0 {name=CORNER only_toplevel=true corner=tt}
 C {devices/ipin.sym} 270 -250 0 0 {name=p1 lab=IN}
 C {devices/ipin.sym} 360 -360 1 0 {name=p2 lab=VDD}
 C {devices/vsource.sym} 20 -186.25 0 0 {name=Vin value="PULSE(0 1.8 1n 0 0 25n 50n)"}
@@ -83,7 +110,7 @@ sa=0 sb=0 sd=0
 model=pfet_01v8
 spiceprefix=X
 }
-C {devices/code.sym} 655 -260 0 0 {name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
+C {devices/code.sym} 5 -440 0 0 {name=NMOS_PMOS_SWEEP only_toplevel=true spice_ignore=false value="
 .options savecurrents
 
 .control
@@ -106,6 +133,8 @@ let switching_points = vector(nmos_length)
 let asymmetricity = vector(nmos_length)
 let Rdon_pmos = vector(nmos_length)
 let Rdon_nmos = vector(nmos_length)
+let rise_times = vector(nmos_length)
+let fall_times = vector(nmos_length)
 let pmos_width = vector(nmos_length)
 let nmos_width = vector(nmos_length)
 
@@ -115,6 +144,7 @@ set swplots = ' '
 while nmos_w < nmos_final 
 
   alter m.xm1.msky130_fd_pr__nfet_01v8 W = nmos_w
+  alter m.xm3.msky130_fd_pr__nfet_01v8 W = e *nmos_w
 
 
   let minimum_asym = 100
@@ -126,6 +156,8 @@ while nmos_w < nmos_final
   while pmos_w < pmos_final
 
     alter m.xm2.msky130_fd_pr__pfet_01v8 W = pmos_w
+    alter m.xm4.msky130_fd_pr__pfet_01v8 W = e * pmos_w
+
 * Run transient analysis using a symmetric pulse of period 25n
     tran 10p 40n 
 
@@ -144,6 +176,7 @@ while nmos_w < nmos_final
   end
 
   alter m.xm2.msky130_fd_pr__pfet_01v8 W = minimum_width_pmos
+  alter m.xm4.msky130_fd_pr__pfet_01v8 W = e *minimum_width_pmos
 
 
 **** Run trainsient again to get rise fall time ****
@@ -155,6 +188,8 @@ while nmos_w < nmos_final
 
   let Rdon_nmos[nmos_index] = tau_fall/200f
   let Rdon_pmos[nmos_index] = tau_rise/200f
+  let fall_times[nmos_index] = tau_fall * 5
+  let rise_times[nmos_index] = tau_rise * 5
 
   set tranplots = ( $tranplots \{$curplot\}.v(out) )
 
@@ -162,7 +197,7 @@ while nmos_w < nmos_final
 
   dc vin 0 1.8 1m 
 
-  meas dc switching_point WHEN v(out)=v(in) CROSS=LAST
+  meas dc switching_point WHEN v(out)=v(in) CROSS=1
 
   let switching_points[nmos_index] = $&switching_point
   let pmos_width[nmos_index] = minimum_width_pmos 
@@ -179,10 +214,11 @@ end
 
 set swplots = ( $swplots \{$curplot\}.v(in) )
 
-plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' 
-plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' 
-plot asymmetricity vs nmos_width  xlabel 'W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' 
-plot Rdon_pmos Rdon_nmos vs nmos_width xlabel 'W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' 
+plot switching_points vs nmos_width xlabel 'W_n' ylabel 'Switching point' title 'Switching points vs width' pointplot
+plot pmos_width vs nmos_width xlabel 'W_n' ylabel 'Least asym W_p' title 'Optimal pmos width per nmos width' pointplot
+plot asymmetricity vs nmos_width  xlabel 'W_n' ylabel 'Least asym' title 'Least asymmetricity per nmos width' pointplot
+plot Rdon_pmos Rdon_nmos vs nmos_width xlabel 'W_n' ylabel 'R_don' title 'Rdon_nmos and pmos per nmos width' pointplot
+plot rise_times fall_times vs nmos_width
 
 set nolegend
 
@@ -198,7 +234,7 @@ plot $tranplots xlimit 26n 28n title 'Transient rise envelope'
 
 
 }
-C {devices/code.sym} 850 -255 0 0 {name=TRANSIENT only_toplevel=true spice_ignore=true value="
+C {devices/code.sym} 0 -595 0 0 {name=TRANSIENT only_toplevel=true spice_ignore=true value="
 .options savecurrents
 
 .control
@@ -226,15 +262,44 @@ plot v(in) v(out)
 
 
 }
-C {devices/opin.sym} 565 -250 2 1 {name=p3 lab=OUT}
-C {devices/capa.sym} 550 -190 0 0 {name=C1
+C {devices/opin.sym} 805 -250 2 1 {name=p3 lab=OUT}
+C {devices/capa.sym} 790 -190 0 0 {name=C1
 m=1
-value=200f
+value=400f
 footprint=1206
 device="ceramic capacitor"}
-C {devices/gnd.sym} 550 -120 0 0 {name=l3 lab=GND}
-C {devices/res.sym} 520 -250 1 0 {name=R1
+C {devices/gnd.sym} 790 -120 0 0 {name=l3 lab=GND}
+C {devices/res.sym} 760 -250 1 0 {name=R1
 value=470
 footprint=1206
 device=resistor
 m=1}
+C {devices/gnd.sym} 510 -100 0 0 {name=l4 lab=GND}
+C {sky130_fd_pr/nfet_01v8.sym} 490 -210 0 0 {name=M3
+W=30
+L=0.16
+nf=1 
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=nfet_01v8
+spiceprefix=X
+}
+C {sky130_fd_pr/pfet_01v8.sym} 490 -290 0 0 {name=M4
+W=30
+L=0.15
+nf=1
+mult=1
+ad="'int((nf+1)/2) * W/nf * 0.29'" 
+pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
+as="'int((nf+2)/2) * W/nf * 0.29'" 
+ps="'2*int((nf+2)/2) * (W/nf + 0.29)'"
+nrd="'0.29 / W'" nrs="'0.29 / W'"
+sa=0 sb=0 sd=0
+model=pfet_01v8
+spiceprefix=X
+}
